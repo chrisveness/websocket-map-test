@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>WebSocket Map Test</title>
+    <style>
+        #map {
+            width: 400px;
+            height: 400px;
+        }
+    </style>
+    <script defer src="//maps.googleapis.com/maps/api/js?key=AIzaSyDbKDDln0bJkfX4tO4fywUHiGFZaNzKSpc"></script>
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', function(event) {
+            const map = new google.maps.Map(document.querySelector('#map'), {});
+            map.fitBounds({ south: 50, west: -6, north: 56, east: 2 });
+
+            const marker = new google.maps.Marker({
+                position: { lat: 52.20, lng: 0.12 },
+                title: 'initial position',
+                map: map,
+            });
+
+            const socket = new WebSocket('ws://localhost:3000');
+
+            socket.addEventListener('open', function(event) {
+                console.log('open connection @', new Date().toISOString().split('T')[1]);
+                socket.send(`Connection from ${location.host} @ ${new Date().toISOString().split('T')[1]}`);
+            });
+
+            socket.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                console.log('msg recd', message);
+                marker.setPosition({ lat: message.lat, lng: message.lng });
+                marker.setTitle(message.title);
+            };
+
+            socket.onclose = function() { // server restarted?
+                location.reload();
+            }
+        });
+    </script>
+</head>
+<body>
+
+<h1>WebSocket Map Test</h1>
+
+<div id="map"></div>
+
+</body>
+</html>
