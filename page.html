@@ -15,24 +15,33 @@
             const map = new google.maps.Map(document.querySelector('#map'), {});
             map.fitBounds({ south: 50, west: -6, north: 56, east: 2 });
 
-            const marker = new google.maps.Marker({
-                position: { lat: 52.20, lng: 0.12 },
-                title: 'initial position',
-                map: map,
-            });
+            const trackers = [ // currently active trackers would be obtained from db
+                { id: 'a', lat: 52.20, lng: 0.12, speed: 0, brng: 0, ts: '00:00:00Z' },
+                { id: 'b', lat: 52.20, lng: 0.12, speed: 0, brng: 0, ts: '00:00:00Z' },
+                { id: 'c', lat: 52.20, lng: 0.12, speed: 0, brng: 0, ts: '00:00:00Z' },
+            ];
 
-            const socket = new WebSocket('ws://localhost:3000');
+            // initialise markers on map
+            const markers = [];
+            for (const tracker of trackers) {
+                markers[tracker.id] = new google.maps.Marker({
+                    position: { lat: tracker.lat, lng: tracker.lng },
+                    title: `speed: ${Math.ceil(tracker.speed*1000)} brng: ${Math.floor(tracker.brng)}°`,
+                    map: map,
+                });
+            }
 
-            socket.addEventListener('open', function(event) {
-                console.log('open connection @', new Date().toISOString().split('T')[1]);
-                socket.send(`Connection from ${location.host} @ ${new Date().toISOString().split('T')[1]}`);
-            });
+            const socket = new WebSocket(`ws://${location.host}`);
+
+            socket.onopen = function(event) {
+                console.log(`open connection to ${event.target.url} @ ${new Date().toISOString().split('T')[1]}`);
+            };
 
             socket.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                console.log('msg recd', message);
-                marker.setPosition({ lat: message.lat, lng: message.lng });
-                marker.setTitle(message.title);
+                const tracker = JSON.parse(event.data); // contains fields { id, lat, lng, speed, brng }
+                markers[tracker.id].setPosition({ lat: tracker.lat, lng: tracker.lng });
+                const title = `speed: ${Math.ceil(tracker.speed*1000)} brng: ${Math.floor(tracker.brng)}°`;
+                markers[tracker.id].setTitle(title);
             };
 
             socket.onclose = function() { // server restarted?
@@ -46,6 +55,8 @@
 <h1>WebSocket Map Test</h1>
 
 <div id="map"></div>
+<p>Mouseover marker for details.</p>
+<p>Source code at <a href="https://github.com/chrisveness/websocket-map-test">github.com/chrisveness/websocket-map-test</a>.</p>
 
 </body>
 </html>
